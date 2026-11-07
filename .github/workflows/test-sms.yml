@@ -11,6 +11,7 @@ jobs:
           TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
           TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
           TO_PHONE: ${{ secrets.TO_PHONE }}
+          FROM_PHONE: ${{ secrets.FROM_PHONE }}
         run: |
           python3 - <<'PY'
           import base64, json, os, time, urllib.request, urllib.parse
@@ -26,11 +27,11 @@ jobs:
               except HTTPError as error:
                   detail = json.load(error)
                   message = str(detail.get('message', ''))
-                  for key in ('TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TO_PHONE'):
+                  for key in ('TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TO_PHONE', 'FROM_PHONE'):
                       if os.environ.get(key):
                           message = message.replace(os.environ[key], '[redacted]')
                   raise RuntimeError('Twilio ' + str(detail.get('code')) + ': ' + message) from None
-          data = urllib.parse.urlencode({'To': os.environ['TO_PHONE'], 'Body': 'sms_appointment_reminders'}).encode()
+          data = urllib.parse.urlencode({'To': os.environ['TO_PHONE'], 'From': os.environ['FROM_PHONE'], 'Body': 'sms_appointment_reminders'}).encode()
           result = call(url, data)
           message_url = url[:-5] + '/' + result['sid'] + '.json'
           for attempt in range(12):
