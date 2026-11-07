@@ -25,7 +25,11 @@ jobs:
                       return json.load(response)
               except HTTPError as error:
                   detail = json.load(error)
-                  raise RuntimeError('Twilio error code: ' + str(detail.get('code'))) from None
+                  message = str(detail.get('message', ''))
+                  for key in ('TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TO_PHONE'):
+                      if os.environ.get(key):
+                          message = message.replace(os.environ[key], '[redacted]')
+                  raise RuntimeError('Twilio ' + str(detail.get('code')) + ': ' + message) from None
           data = urllib.parse.urlencode({'To': os.environ['TO_PHONE'], 'Body': 'sms_appointment_reminders'}).encode()
           result = call(url, data)
           message_url = url[:-5] + '/' + result['sid'] + '.json'
