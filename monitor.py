@@ -1,6 +1,7 @@
 import base64
 import json
 import os
+import re
 import sys
 import urllib.request
 import urllib.parse
@@ -27,8 +28,8 @@ def main():
         main = page.get_by_role('main')
         main.get_by_role('heading', name='The Legend of Zelda™: Ocarina of Time Playable Ocarina', exact=True).wait_for()
         # Missing or stuck purchase controls are errors, never stock signals.
-        buy = main.get_by_role('button', name='Add to cart', exact=True)
-        sold = main.get_by_role('button', name='Out of stock', exact=True)
+        buy = main.get_by_role('button', name=re.compile(r'^Add to cart$', re.I))
+        sold = main.get_by_role('button', name=re.compile(r'^(Sold out|Out of stock)$', re.I))
         import time
         deadline = time.monotonic() + 60
         available = False
@@ -37,7 +38,7 @@ def main():
                 available = True
                 break
             if sold.count() == 1 and sold.is_visible():
-                print('Out of stock')
+                print('Nintendo reports: Sold out / Out of stock. No SMS sent.')
                 browser.close()
                 return
             time.sleep(2)
