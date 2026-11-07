@@ -14,13 +14,18 @@ jobs:
         run: |
           python3 - <<'PY'
           import base64, json, os, time, urllib.request, urllib.parse
+          from urllib.error import HTTPError
           sid = os.environ['TWILIO_ACCOUNT_SID']
           auth = base64.b64encode((sid + ':' + os.environ['TWILIO_AUTH_TOKEN']).encode()).decode()
           url = 'https://api.twilio.com/2010-04-01/Accounts/' + sid + '/Messages.json'
           def call(url, data=None):
               req = urllib.request.Request(url, data=data, headers={'Authorization': 'Basic ' + auth})
-              with urllib.request.urlopen(req, timeout=30) as response:
-                  return json.load(response)
+              try:
+                  with urllib.request.urlopen(req, timeout=30) as response:
+                      return json.load(response)
+              except HTTPError as error:
+                  detail = json.load(error)
+                  raise RuntimeError('Twilio error code: ' + str(detail.get('code'))) from None
           data = urllib.parse.urlencode({'To': os.environ['TO_PHONE'], 'Body': 'sms_appointment_reminders'}).encode()
           result = call(url, data)
           message_url = url[:-5] + '/' + result['sid'] + '.json'
