@@ -46,7 +46,7 @@ def main():
         if not available:
             raise RuntimeError('Could not resolve stock controls. Review Nintendo page; no SMS sent.')
 
-    required = ['TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TO_PHONE', 'GH_TOKEN', 'GITHUB_REPOSITORY']
+    required = ['TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TO_PHONE', 'FROM_PHONE', 'GH_TOKEN', 'GITHUB_REPOSITORY']
     if any(not os.environ.get(k) for k in required):
         raise RuntimeError('Missing required GitHub secrets or environment variables')
     # Reserve durably BEFORE sending. An uncertain send cannot cause repeated texts.
@@ -58,7 +58,7 @@ def main():
         json.load(response)
     auth = base64.b64encode((os.environ['TWILIO_ACCOUNT_SID'] + ':' + os.environ['TWILIO_AUTH_TOKEN']).encode()).decode()
     result = request('https://api.twilio.com/2010-04-01/Accounts/' + os.environ['TWILIO_ACCOUNT_SID'] + '/Messages.json',
-        urllib.parse.urlencode({'To': os.environ['TO_PHONE'], 'Body': 'sms_appointment_reminders'}).encode(),
+        urllib.parse.urlencode({'To': os.environ['TO_PHONE'], 'From': os.environ['FROM_PHONE'], 'Body': 'sms_appointment_reminders'}).encode(),
         {'Authorization': 'Basic ' + auth})
     if result.get('status') in ('failed', 'undelivered'):
         raise RuntimeError('Twilio rejected the message; inspect Twilio logs')
