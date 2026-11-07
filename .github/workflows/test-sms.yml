@@ -1,0 +1,38 @@
+name: Test SMS delivery
+on: workflow_dispatch
+permissions: {}
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - name: Send one trial test SMS
+        env:
+          TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
+          TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
+          TO_PHONE: ${{ secrets.TO_PHONE }}
+        run: |
+          python3 - <<'PY'
+          import base64, json, os, time, urllib.request, urllib.parse
+          sid = os.environ['TWILIO_ACCOUNT_SID']
+          auth = base64.b64encode((sid + ':' + os.environ['TWILIO_AUTH_TOKEN']).encode()).decode()
+          url = 'https://api.twilio.com/2010-04-01/Accounts/' + sid + '/Messages.json'
+          def call(url, data=None):
+              req = urllib.request.Request(url, data=data, headers={'Authorization': 'Basic ' + auth})
+              with urllib.request.urlopen(req, timeout=30) as response:
+                  return json.load(response)
+          data = urllib.parse.urlencode({'To': os.environ['TO_PHONE'], 'Body': 'sms_appointment_reminders'}).encode()
+          result = call(url, data)
+          message_url = url[:-5] + '/' + result['sid'] + '.json'
+          for attempt in range(12):
+              status = result['status']
+              print('Twilio delivery status:', status)
+              if status == 'delivered':
+                  break
+              if status in ('failed', 'undelivered', 'canceled'):
+                  raise RuntimeError('SMS failed; error code ' + str(result.get('error_code')))
+              time.sleep(5)
+              result = call(message_url)
+          else:
+              raise RuntimeError('Delivery not confirmed. Check Twilio logs before repeating test.')
+          PY
